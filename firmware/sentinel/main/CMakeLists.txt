@@ -1,0 +1,23 @@
+idf_component_register(
+    SRCS
+        "app_main.c"
+        "sentinel_camera.c"
+        "sentinel_wifi.c"
+        "factory_reset.c"
+        "nvs_setup.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        nvs_flash
+        esp_partition
+        bt
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_timer
+        driver
+        espressif__esp32-camera
+        sentinel_bind
+        sentinel_prov
+        sentinel_stream
+        sentinel_mqtt
+)

@@ -1,0 +1,6 @@
+# ESP32-S3 16 MB — NVS encryption keys + app (see docs/hardware.md)
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     0x9000,  0x6000,
+nvs_keys, data, nvs_keys,,        0x1000,
+phy_init, data, phy,     ,        0x1000,
+factory,  app,  factory, ,        3M,
