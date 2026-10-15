@@ -1,0 +1,16 @@
+FROM docker.io/library/python:3.12-slim-bookworm
+
+WORKDIR /app
+
+RUN useradd --create-home --uid 1000 sentinel
+
+COPY pyproject.toml README.md ./
+COPY config.toml /etc/sentinel/controller.toml
+COPY src ./src
+
+RUN pip install --no-cache-dir .
+
+USER sentinel
+ENV SENTINEL_CONFIG=/etc/sentinel/controller.toml
+
+ENTRYPOINT ["sentinel-controller", "/etc/sentinel/controller.toml"]

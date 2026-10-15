@@ -1,0 +1,22 @@
+{
+  "type": "update",
+  "before": {
+    "id": "1718987129.308396-me0001",
+    "camera": "sentinel_a",
+    "severity": "alert",
+    "data": {
+      "objects": ["person"],
+      "sub_labels": []
+    }
+  },
+  "after": {
+    "id": "1718987129.308396-me0001",
+    "camera": "sentinel_a",
+    "severity": "alert",
+    "thumb_path": "/media/frigate/clips/review/thumb-me.webp",
+    "data": {
+      "objects": ["person"],
+      "sub_labels": ["me"]
+    }
+  }
+}

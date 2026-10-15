@@ -1,0 +1,40 @@
+# Defaults from docs/phases/CONTRACTS.md
+
+[controller]
+trigger_labels = ["person"]
+hold_seconds = 60
+max_session_seconds = 900
+ignore_sub_labels = []
+notify = false
+arm_refresh_seconds = 20
+armed_ttl_seconds = 60
+
+[mqtt]
+host = "10.77.0.1"
+port = 1883
+username = "controller"
+# password via SENTINEL_MQTT_PASSWORD or secrets
+
+[frigate]
+url = "http://127.0.0.1:5000"
+# api_key via SENTINEL_FRIGATE_API_KEY if required
+
+[paths]
+evidence_dir = "/var/lib/sentinel/evidence"
+clock_source = "system UTC (chrony on Fedora host)"
+
+# Camera identities from CONTRACTS.md (Frigate name → short MQTT id)
+[[cameras]]
+frigate_name = "sentinel_a"
+id = "a"
+static_ip = "10.77.0.11"
+
+[[cameras]]
+frigate_name = "sentinel_b"
+id = "b"
+static_ip = "10.77.0.12"
+
+[[cameras]]
+frigate_name = "sentinel_c"
+id = "c"
+static_ip = "10.77.0.13"

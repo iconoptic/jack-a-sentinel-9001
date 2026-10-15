@@ -1,0 +1,33 @@
+{
+  "type": "new",
+  "before": {
+    "id": "1718987129.308396-fqk5ka",
+    "camera": "sentinel_a",
+    "start_time": 1718987129.308396,
+    "end_time": null,
+    "severity": "detection",
+    "thumb_path": "/media/frigate/clips/review/thumb-sentinel_a-1718987129.webp",
+    "data": {
+      "detections": ["1718987128.947436-g92ztx"],
+      "objects": ["person"],
+      "sub_labels": [],
+      "zones": [],
+      "audio": []
+    }
+  },
+  "after": {
+    "id": "1718987129.308396-fqk5ka",
+    "camera": "sentinel_a",
+    "start_time": 1718987129.308396,
+    "end_time": null,
+    "severity": "alert",
+    "thumb_path": "/media/frigate/clips/review/thumb-sentinel_a-1718987129.webp",
+    "data": {
+      "detections": ["1718987128.947436-g92ztx"],
+      "objects": ["person"],
+      "sub_labels": [],
+      "zones": [],
+      "audio": []
+    }
+  }
+}
