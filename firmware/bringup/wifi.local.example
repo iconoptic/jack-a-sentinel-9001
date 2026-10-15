@@ -1,0 +1,4 @@
+# Copy to wifi.local (gitignored) before building for the bench.
+# Keys are case-sensitive.
+SSID=your-bench-ssid
+PSK=your-wifi-password

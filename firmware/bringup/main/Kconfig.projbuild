@@ -1,0 +1,20 @@
+choice SENTINEL_BRINGUP_FRAMESIZE
+    prompt "Default camera framesize (change per MEASUREMENTS.md row)"
+    default SENTINEL_BRINGUP_FRAMESIZE_HD
+
+    config SENTINEL_BRINGUP_FRAMESIZE_VGA
+        bool "VGA 640x480"
+    config SENTINEL_BRINGUP_FRAMESIZE_SVGA
+        bool "SVGA 800x600"
+    config SENTINEL_BRINGUP_FRAMESIZE_HD
+        bool "HD 1280x720"
+    config SENTINEL_BRINGUP_FRAMESIZE_UXGA
+        bool "UXGA 1600x1200"
+endchoice
+
+config SENTINEL_BRINGUP_JPEG_QUALITY
+    int "JPEG quality (0-63, lower is higher quality)"
+    range 4 30
+    default 12
+    help
+        OV3660 JPEG quality for bench streaming. Record the value used in MEASUREMENTS.md.
