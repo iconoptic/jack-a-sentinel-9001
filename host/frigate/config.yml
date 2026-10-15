@@ -1,0 +1,108 @@
+# Frigate 0.18.1 — one bench camera (sentinel_a).
+# Checked against docs/vendor/frigate (see docs/vendor/VERSIONS.tsv) and
+# docs/vendor/go2rtc. Placeholders are filled from the container environment.
+# Do not write passwords or stream tokens into this file.
+
+mqtt:
+  host: "{FRIGATE_MQTT_HOST}"
+  port: 1883
+  user: "{FRIGATE_MQTT_USER}"
+  password: "{FRIGATE_MQTT_PASSWORD}"
+
+# preset-vaapi decodes the H.264 restream. MJPEG → H.264 is go2rtc's #hardware
+# flag (camera_specific.md), which needs /dev/dri in the container.
+ffmpeg:
+  hwaccel_args: preset-vaapi
+  output_args:
+    # Cameras have no audio. The default preset transcodes an audio track to AAC.
+    record: preset-record-generic
+
+# getting_started.md "Use Intel OpenVINO detector". The model files ship in the
+# 0.18.1 image. device: GPU is the iGPU (6th gen Intel or newer).
+detectors:
+  ov:
+    type: openvino
+    device: GPU
+
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+
+# reference.md default is 30. CONTRACTS.md sets 5 so the controller's hold
+# timer is not stacked on another 30 s.
+motion:
+  mqtt_off_delay: 5
+
+# record.md: mode all keeps every segment inside the pre/post window.
+# continuous.days gives the rolling buffer those segments come from.
+# Segments are about 10 s, so pre-roll can land a little short or long of 10.
+record:
+  enabled: true
+  continuous:
+    days: 1
+  motion:
+    days: 7
+  alerts:
+    pre_capture: 10
+    post_capture: 30
+    retain:
+      days: 90
+      mode: all
+
+# face_recognition.md. model_size small does not take a device key.
+# Enroll only yourself, later, from the UI. This phase does not enroll anyone.
+face_recognition:
+  enabled: true
+  model_size: small
+
+# review.md: manual sentinel_sync events become alerts when the label is listed.
+review:
+  alerts:
+    labels:
+      - person
+      - sentinel_sync
+
+# system.md: go2rtc substitutes {FRIGATE_*} only from the container environment,
+# not from the config environment_vars block. Stream URL shape is CONTRACTS.md
+# and camera_specific.md (MJPEG via ffmpeg #video=h264#hardware).
+# api/rtsp/webrtc listen addresses are go2rtc's own keys (README security section).
+go2rtc:
+  streams:
+    sentinel_a: "ffmpeg:http://10.77.0.11/stream?token={FRIGATE_STREAM_TOKEN_A}#video=h264#hardware"
+  api:
+    listen: "127.0.0.1:1984"
+  rtsp:
+    listen: "127.0.0.1:8554"
+  webrtc:
+    listen: "127.0.0.1:8555"
+
+cameras:
+  sentinel_a:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/sentinel_a
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - record
+    # reference.md: detect.enabled defaults to false.
+    # 1280×720 is the CONTRACTS.md provisional stream size.
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+    objects:
+      track:
+        - person
+
+# reference.md listen values accept ip:port. Localhost keeps the UI and the
+# unauthenticated internal API off the camera AP and off Ethernet.
+networking:
+  listen:
+    internal: 127.0.0.1:5000
+    external: 127.0.0.1:8971

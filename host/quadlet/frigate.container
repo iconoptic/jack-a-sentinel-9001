@@ -1,0 +1,32 @@
+[Unit]
+Description=Sentinel Frigate
+After=network-online.target mosquitto.service
+Wants=network-online.target
+Requires=mosquitto.service
+
+[Container]
+# Floating tag until host/scripts/pin-digests.sh rewrites this line on Fedora.
+Image=ghcr.io/blakeblackshear/frigate:0.18.1
+ContainerName=sentinel-frigate
+Network=host
+EnvironmentFile=/etc/sentinel/frigate.env
+# Match ls /dev/dri from probe-host.sh. Delete a line if that node is absent.
+AddDevice=/dev/dri/renderD128
+AddDevice=/dev/dri/card0
+# installation.md: 128MB is enough for two 720p detect streams, and logs in
+# shm can use about 40MB. 256m covers one 1280x720 camera plus that.
+ShmSize=256m
+# installation.md recommends a tmpfs for the recording segment cache.
+Tmpfs=/tmp/cache:rw,nosuid,nodev,size=1000000000,mode=1777
+Volume=frigate-config.volume:/config:Z
+Volume=/etc/sentinel/frigate/config.yml:/config/config.yml:Z
+Volume=frigate-media.volume:/media/frigate:Z
+StopTimeout=30
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

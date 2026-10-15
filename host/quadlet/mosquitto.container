@@ -1,0 +1,25 @@
+[Unit]
+Description=Sentinel MQTT broker (mosquitto)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+# Floating tag until host/scripts/pin-digests.sh rewrites this line on Fedora.
+Image=docker.io/library/eclipse-mosquitto:2
+ContainerName=sentinel-mosquitto
+Network=host
+# Image USER is mosquitto (uid 1883). Start as root so the entrypoint can
+# chown the mounted config and data, then drop privileges.
+User=0
+Volume=/etc/sentinel/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:Z
+Volume=/etc/sentinel/mosquitto/acl:/mosquitto/config/acl:Z
+Volume=/etc/sentinel/mosquitto/passwords:/mosquitto/config/passwords:Z
+Volume=mosquitto-data.volume:/mosquitto/data:Z
+StopTimeout=10
+
+[Service]
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

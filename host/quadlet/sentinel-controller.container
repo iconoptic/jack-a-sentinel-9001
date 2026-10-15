@@ -1,0 +1,30 @@
+# Install: copy to /etc/containers/systemd/ on the Fedora host, then
+# systemctl daemon-reload && systemctl start sentinel-controller.service
+# (Quadlet units are enabled by their [Install] section; host/scripts/install-services.sh does all of this.)
+#
+# Build image on the host:
+#   podman build -t localhost/sentinel-controller:latest -f host/controller/Containerfile host/controller
+
+[Unit]
+Description=Sentinel cross-camera controller
+After=network-online.target mosquitto.service frigate.service
+Wants=network-online.target
+Requires=mosquitto.service
+
+[Container]
+ContainerName=sentinel-controller
+Image=localhost/sentinel-controller:latest
+Network=host
+Environment=SENTINEL_CONFIG=/etc/sentinel/controller.toml
+Environment=SENTINEL_EVIDENCE_DIR=/var/lib/sentinel/evidence
+Environment=SENTINEL_FRIGATE_URL=http://127.0.0.1:5000
+Volume=/etc/sentinel/controller.toml:/etc/sentinel/controller.toml:ro,Z
+Volume=sentinel-evidence.volume:/var/lib/sentinel/evidence:Z
+Secret=sentinel-controller-mqtt-password,type=env,target=SENTINEL_MQTT_PASSWORD
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

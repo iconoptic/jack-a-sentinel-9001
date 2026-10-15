@@ -1,0 +1,29 @@
+# Mosquitto ACL. No secrets in this file.
+# Installed copy: /etc/sentinel/mosquitto/acl
+# Phase 4 appends users on the installed copy. Keep this example in sync when
+# that tool grows a generator.
+
+# Frigate publishes and subscribes under its own topic prefix.
+user frigate
+topic readwrite frigate/#
+
+# cam_a publishes telemetry/state (and LWT) and subscribes only to its cmd.
+# CONTRACTS.md: publish sentinel/<own id>/# , subscribe sentinel/<own id>/cmd.
+user cam_a
+topic write sentinel/a/#
+topic read sentinel/a/cmd
+
+# Phase 4, same shape:
+# user cam_b
+# topic write sentinel/b/#
+# topic read sentinel/b/cmd
+#
+# user cam_c
+# topic write sentinel/c/#
+# topic read sentinel/c/cmd
+
+# host/controller username. Subscribe to Frigate and camera state; publish cmd only.
+user controller
+topic read frigate/#
+topic read sentinel/#
+topic write sentinel/+/cmd

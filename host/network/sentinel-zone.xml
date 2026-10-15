@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<zone target="DROP">
+  <short>Sentinel</short>
+  <description>Private camera AP. Drop inbound traffic except MQTT. No masquerade and no forward to other zones.</description>
+  <port port="1883" protocol="tcp"/>
+</zone>
