@@ -1,0 +1,31 @@
+# Upstream docs pulled by scripts/fetch-docs.sh (pinned in that script)
+docs/vendor/
+
+# ESP-IDF build output (commit sdkconfig.defaults and dependencies.lock, not sdkconfig)
+firmware/**/build/
+firmware/**/managed_components/
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old
+
+# Secrets: Wi-Fi PSKs, MQTT creds, stream tokens, proof-of-possession codes, signing keys
+secrets/
+firmware/bringup/wifi.local
+*.env
+*.pem
+*.key
+!docs/**/*.pem
+
+# Footage never goes in git
+recordings/
+evidence/
+*.mp4
+*.mjpeg
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Local IDE
+.cursor/
