@@ -29,6 +29,9 @@ Phase 0 and Phase 5 are human checklists. Do not hand them to a coding agent.
 | [04-provision-and-controller.md](04-provision-and-controller.md) | Two coding prompts | Composer 2.5 Fast | Controller in **A**; provision CLI in **B** |
 | [05-deploy.md](05-deploy.md) | Human checklist | — | After Phases 2–4 exit on real hardware |
 | [06-hardening.md](06-hardening.md) | Coding + Grok eFuse | Composer (OTA/TLS); Grok 4.7 (eFuses) | After Phase 5 week |
+| [07-simple-motion-mode.md](07-simple-motion-mode.md) | Coding (prompts A–D) | Composer 2.5 Fast | A + B together, C any time; D after the sync below |
+| [07-simple-motion-mode-followup.md](07-simple-motion-mode-followup.md) | Coding (A2, B2) | Composer 2.5 Fast | A2 + B2 together, after 07 A + B; before the sync |
+| [SYNC-DEPLOY-PC.md](SYNC-DEPLOY-PC.md) | Git sync, run **on the deployment PC** | Composer 2.5 Fast (Grok 4.7 for firmware conflicts) | After 07 A + B and the follow-up (A2 + B2) are pushed |
 
 [CONTRACTS.md](CONTRACTS.md) is not an agent prompt.
 

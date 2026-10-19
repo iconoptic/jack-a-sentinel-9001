@@ -244,6 +244,16 @@ The `record` and `face_recognition` keys have been checked against the vendored 
 docs. The rest is a sketch of intent, not tested config. Check it against
 `docs/vendor/frigate/` and `docs/vendor/go2rtc/` while implementing.
 
+**Simple motion mode** (Phase 7) records the camera's own JPEG frames when the
+picture changes, for the hours when ffmpeg-in-Frigate is the wrong tool. Frigate
+mode stays the default. The installer selects the stack
+(`scripts/install-fedora.sh --mode simple` or `--mode frigate`). Recording is
+allowed at all times except Monday–Friday 06:00–16:00 in the host's local
+timezone: movement from 4:00 pm to 6:00 am on weekdays, and any time on the
+weekend. The two modes take turns because the camera serves one stream client.
+The frozen interface is
+[phases/07-simple-motion-mode.md](phases/07-simple-motion-mode.md).
+
 ### 5. Cross-camera trigger: `sentinel-controller`
 
 This is the custom part, and it is small and testable:
@@ -394,6 +404,16 @@ alerts on all three, and the cameras switch to armed and back.
       mode. **Irreversible.**
 - [ ] MQTT over TLS with a host CA (the CA certificate is delivered in the bind payload).
 - [ ] Fedora host: LUKS on the recordings disk, auto-login disabled.
+
+### Phase 7: Simple motion mode
+
+- [ ] `host/recorder/`: motion JPEG recorder and its pytest suite.
+- [ ] Installer `--mode simple|frigate` switches the Quadlet units and renders
+      `/etc/sentinel/recorder.toml`.
+- [ ] Schedule: record on motion except Monday–Friday 06:00–16:00 host-local time.
+
+**Exit:** `scripts/install-fedora.sh --mode simple --cameras a` records motion
+JPEGs from one camera. `--mode frigate` switches back.
 
 ## Planned repo layout
 

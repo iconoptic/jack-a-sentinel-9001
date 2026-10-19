@@ -120,7 +120,7 @@ broker is reachable, then wipe bind NVS and reboot to UNBOUND.
 | `GET` | `/stream` | `Authorization: Bearer <token>` **or** `?token=` | `multipart/x-mixed-replace` MJPEG |
 | `GET` | `/snapshot` | same | single JPEG |
 
-- One stream client at a time; go2rtc fans out on the host.
+- One stream client at a time. In Frigate mode that client is go2rtc, which fans the stream out on the host. In simple mode it is sentinel-recorder. See [Simple mode](#simple-mode).
 - Query-token form is preferred for go2rtc on the isolated AP.
 
 go2rtc source shape (Frigate config):
@@ -128,6 +128,19 @@ go2rtc source shape (Frigate config):
 ```text
 ffmpeg:http://10.77.0.11/stream?token={TOKEN_A}#video=h264#hardware
 ```
+
+## Simple mode
+
+Simple mode records motion JPEGs on the host. Frigate mode stays the default.
+`scripts/install-fedora.sh --mode simple` and `--mode frigate` switch the host
+between them.
+
+`GET /stream` and `GET /snapshot` are consumed by two host clients: go2rtc, or
+sentinel-recorder. The installer runs one of them. The camera's HTTP server
+serves one stream client at a time.
+
+Config, schedule, on-disk layout, and the Quadlet unit are the frozen interface
+in [07-simple-motion-mode.md](07-simple-motion-mode.md).
 
 ## MQTT (cameras ↔ host)
 
