@@ -1,0 +1,24 @@
+FROM docker.io/library/python:3.12-slim-bookworm
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 1000 sentinel
+
+COPY pyproject.toml README.md ./
+COPY config.toml /etc/sentinel/recorder.toml
+COPY src ./src
+
+RUN pip install --no-cache-dir .
+
+# Podman copies this mount point's ownership into a new, empty named volume.
+RUN mkdir -p /var/lib/sentinel/recordings \
+    && chown sentinel:sentinel /var/lib/sentinel/recordings
+
+USER sentinel
+ENV SENTINEL_RECORDER_CONFIG=/etc/sentinel/recorder.toml
+
+ENTRYPOINT ["sentinel-recorder"]
+CMD ["/etc/sentinel/recorder.toml"]

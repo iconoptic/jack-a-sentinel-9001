@@ -3,6 +3,7 @@
 #   - esp_prov runtime deps (BLE provisioning): bleak, cryptography, protobuf
 #   - host/controller  (editable, with [dev] extras) once its package is installable
 #   - host/provision   (editable, with [dev] extras) once it exists (Phase 4)
+#   - host/recorder    (editable, with [dev] extras) once its package is installable
 #
 # Safe to re-run; it only adds/upgrades. ESP-IDF keeps its own separate venv.
 set -euo pipefail
@@ -45,6 +46,7 @@ install_local() {
 }
 install_local host/controller
 install_local host/provision
+install_local host/recorder
 
 cat <<EOF
 

@@ -1,0 +1,34 @@
+# Defaults from docs/phases/07-simple-motion-mode.md
+
+[recorder]
+recordings_dir = "/var/lib/sentinel/recordings"
+source = "stream"
+snapshot_fps = 5
+pre_roll_seconds = 5
+post_roll_seconds = 30
+max_event_seconds = 900
+latest_jpeg_seconds = 2
+retain_days = 30
+max_disk_gb = 100
+connect_timeout_seconds = 5
+read_timeout_seconds = 10
+
+[schedule]
+enabled = true
+timezone = "UTC"
+quiet_days = ["mon", "tue", "wed", "thu", "fri"]
+quiet_start = "06:00"
+quiet_end = "16:00"
+
+[motion]
+analysis_width = 160
+pixel_threshold = 25
+min_area_percent = 1.0
+trigger_frames = 2
+background_alpha = 0.05
+masks = []
+
+[[cameras]]
+frigate_name = "sentinel_a"
+id = "a"
+static_ip = "10.77.0.11"
