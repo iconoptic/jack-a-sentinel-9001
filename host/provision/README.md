@@ -33,7 +33,8 @@ The BLE flow below is the fallback for boards flashed without secrets, and for r
 a factory reset when you would rather not reflash.
 
 Subcommands: `init` (generate secrets), `ap-set KEY=VALUE` (edit `ap.env`), `render-frigate`
-(all cameras, tokens filled), `nvs-csv CAM --out FILE` (bind data for the flasher), `bind CAM`.
+(all cameras, tokens filled), `render-recorder` (simple-mode config and stream-token env),
+`nvs-csv CAM --out FILE` (bind data for the flasher), `bind CAM`.
 
 ## Example — `sentinel_a`
 

@@ -2,8 +2,11 @@
 # Pull Frigate and Mosquitto as root, record digests under secrets/digests.txt,
 # and pin Image= in the installed Quadlet units when those files exist.
 # Does not edit the git checkout. Digests are recorded on Fedora, not here.
-#   sudo host/scripts/pin-digests.sh              # pull, record, pin
-#   sudo host/scripts/pin-digests.sh --no-pull    # pin from the images already in the store
+#   sudo host/scripts/pin-digests.sh                         # pull, record, pin both
+#   sudo host/scripts/pin-digests.sh --no-pull               # pin from images already in the store
+#   sudo host/scripts/pin-digests.sh --skip-frigate          # simple mode: Mosquitto only
+#   sudo host/scripts/pin-digests.sh --no-pull --skip-frigate
+# Default (no --skip-frigate) still pulls and pins Frigate and Mosquitto.
 set -euo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -12,6 +15,18 @@ frigate_ref=ghcr.io/blakeblackshear/frigate:0.18.1
 mosquitto_ref=docker.io/library/eclipse-mosquitto:2
 dest=$repo_root/secrets/digests.txt
 unit_dir=${SENTINEL_UNIT_DIR:-/etc/containers/systemd}
+PULL=1
+SKIP_FRIGATE=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --no-pull) PULL=0 ;;
+        --skip-frigate) SKIP_FRIGATE=1 ;;
+        -h|--help) awk 'NR == 1 { next } /^#/ { print; next } { exit }' "$0"; exit 0 ;;
+        *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
+    esac
+    shift
+done
 
 if [[ "$(id -u)" -ne 0 && "${SENTINEL_ALLOW_NONROOT:-0}" != 1 ]]; then
     printf 'Run as root: sudo %s\n' "$0" >&2
@@ -23,8 +38,10 @@ command -v podman >/dev/null 2>&1 || {
     exit 1
 }
 
-if [[ "${1:-}" != "--no-pull" ]]; then
-    podman pull "$frigate_ref"
+if [[ $PULL == 1 ]]; then
+    if [[ $SKIP_FRIGATE == 0 ]]; then
+        podman pull "$frigate_ref"
+    fi
     podman pull "$mosquitto_ref"
 fi
 
@@ -41,14 +58,25 @@ pin_of() {
     printf '%s@%s\n' "$ref" "$hex"
 }
 
-frigate_pin=$(pin_of "$frigate_ref")
 mosquitto_pin=$(pin_of "$mosquitto_ref")
+frigate_pin=""
+if [[ $SKIP_FRIGATE == 0 ]]; then
+    frigate_pin=$(pin_of "$frigate_ref")
+elif [[ -f $dest ]]; then
+    # Keep a Frigate pin recorded earlier so a later frigate-mode run still has it
+    # until that run pulls again. Avoid a pipe here: pipefail plus head's SIGPIPE
+    # would fail the script.
+    frigate_pin=$(sed -n 's/^frigate=//p' "$dest")
+    frigate_pin=${frigate_pin%%$'\n'*}
+fi
 
 umask 077
 mkdir -p "$repo_root/secrets"
 {
     printf 'pulled_at=%s\n' "$(date -Is)"
-    printf 'frigate=%s\n' "$frigate_pin"
+    if [[ -n $frigate_pin ]]; then
+        printf 'frigate=%s\n' "$frigate_pin"
+    fi
     printf 'mosquitto=%s\n' "$mosquitto_pin"
 } >"$dest"
 printf 'Wrote %s\n' "$dest"
@@ -75,7 +103,9 @@ rewrite_unit() {
     printf 'Pinned %s\n' "$unit"
 }
 
-rewrite_unit "$unit_dir/frigate.container" "$frigate_ref" "$frigate_pin"
+if [[ $SKIP_FRIGATE == 0 ]]; then
+    rewrite_unit "$unit_dir/frigate.container" "$frigate_ref" "$frigate_pin"
+fi
 rewrite_unit "$unit_dir/mosquitto.container" "$mosquitto_ref" "$mosquitto_pin"
 
 if [[ -f "$unit_dir/frigate.container" || -f "$unit_dir/mosquitto.container" ]]; then

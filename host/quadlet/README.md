@@ -42,3 +42,8 @@ controller already in `host/controller/`. Leave them disabled for the Phase 2
 exit. That unit expects host networking, `http://127.0.0.1:5000`, and MQTT user
 `controller` on `10.77.0.1:1883`, which is what the Frigate listen address and
 the mosquitto ACL provide.
+
+`sentinel-recorder.container` and `sentinel-recordings.volume` are simple mode.
+`install-services.sh --mode` installs one mode's `.container` files and removes
+the other's. Quadlet units are not `systemctl disable`d; deleting the file and
+`daemon-reload` turns that mode off. The recordings volume stays across the switch.

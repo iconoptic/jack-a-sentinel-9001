@@ -21,6 +21,7 @@ from sentinel_provision.frigate_config import ensure_frigate_camera, render_frig
 from sentinel_provision.init_secrets import init_secrets
 from sentinel_provision.mosquitto_config import ensure_acl_block
 from sentinel_provision.nvs_image import bind_nvs_csv
+from sentinel_provision.recorder_config import render_recorder_config, render_recorder_env
 
 
 def _repo_root(explicit: Path | None) -> Path:
@@ -190,6 +191,31 @@ def cmd_render_frigate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_render_recorder(args: argparse.Namespace) -> int:
+    repo = _repo_root(args.repo_root)
+    names = _camera_names(args.cameras)
+    cams = [CAMERAS[name] for name in names]
+    template_path = repo / "host" / "recorder" / "config.toml"
+    if not template_path.is_file():
+        raise SystemExit(
+            f"Missing {template_path}. Simple mode needs the recorder package in host/recorder/."
+        )
+    tokens = {cam.camera_id: load_camera_secrets(repo / "secrets", cam).stream_token for cam in cams}
+    try:
+        text = render_recorder_config(
+            template_path.read_text(),
+            names,
+            timezone=args.timezone,
+            ignore_schedule=args.ignore_schedule,
+        )
+        env_text = render_recorder_env(cams, tokens)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    write_private(Path(args.out), text)
+    write_private(Path(args.env_out), env_text)
+    return 0
+
+
 def cmd_nvs_csv(args: argparse.Namespace) -> int:
     """Everything a board needs to boot BOUND, as nvs_partition_gen CSV. Read-only on secrets."""
     repo = _repo_root(args.repo_root)
@@ -235,6 +261,21 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--cameras", default="a,b,c")
     render.add_argument("--out", default="-", help="Output path, or - for stdout")
     render.set_defaults(func=cmd_render_frigate)
+
+    recorder = sub.add_parser(
+        "render-recorder",
+        help="Simple-mode recorder.toml and stream-token env for the selected cameras",
+    )
+    recorder.add_argument("--cameras", required=True, help="Camera ids, comma separated (a,b,c)")
+    recorder.add_argument("--timezone", required=True, help="IANA zone written to schedule.timezone")
+    recorder.add_argument("--out", required=True, help="recorder.toml path")
+    recorder.add_argument("--env-out", required=True, help="recorder.env path (stream tokens only)")
+    recorder.add_argument(
+        "--ignore-schedule",
+        action="store_true",
+        help="Set schedule.enabled = false for this render only",
+    )
+    recorder.set_defaults(func=cmd_render_recorder)
 
     nvs = sub.add_parser("nvs-csv", help="Bind data as nvs_partition_gen CSV (one-click flash)")
     nvs.add_argument("camera", choices=sorted(CAMERAS))

@@ -13,6 +13,7 @@ sentinel-controller as system services that return after a reboot. It refuses to
 radio if the default route is on Wi-Fi. Run step 1 (the probe) first if you want to see the
 hardware before anything changes. The numbered steps stay as the manual equivalent and as the
 checklist for what the script did; steps 6 and 7 (camera, human exit check) are still yours.
+That install is Frigate mode. Simple mode is [below](#simple-mode).
 
 Flash the cameras with `scripts/install-esp32.sh all`; they boot already bound to this host.
 
@@ -269,7 +270,66 @@ standing up this phase.
 listens on `10.77.0.1` and restarts until that address exists. After a reboot,
 repeat the route check (`ip -4 route`) and `systemctl status frigate`.
 
+## Simple mode
+
+The steps above install Frigate mode. Simple mode records each camera's JPEG
+frames when the picture changes, and Mosquitto stays up so camera telemetry
+keeps working. The camera serves one stream client, so this mode and Frigate
+mode take turns.
+
+```sh
+scripts/install-fedora.sh --mode simple --cameras a
+```
+
+`--cameras a,b` or `a,b,c` adds the others. Switch back with
+`scripts/install-fedora.sh --mode frigate`.
+
+```sh
+journalctl -u sentinel-recorder -f
+```
+
+Recording is allowed at all times except Monday–Friday 06:00–16:00 in the
+host's local timezone: movement from 4:00 pm to 6:00 am on weekdays, and any
+time on Saturday and Sunday. A weekday afternoon bench test ignores that window
+for one run. The flag is not saved; the next run puts the schedule back:
+
+```sh
+sudo host/scripts/install-services.sh --mode simple --ignore-schedule --cameras a
+sudo host/scripts/install-services.sh --mode simple --cameras a
+```
+
+Events land on the recordings volume, one directory per stretch of motion:
+
+```text
+/var/lib/containers/storage/volumes/sentinel-recordings/_data/sentinel_a/<date>/<time>/frames/
+```
+
+Open `frames/` in any image viewer, or `mpv "mf://frames/*.jpg" --mf-fps=5`.
+`latest.jpg` beside the date directories is a recent frame for aiming:
+
+```sh
+sudo cp /var/lib/containers/storage/volumes/sentinel-recordings/_data/sentinel_a/latest.jpg /tmp/sentinel_a-latest.jpg
+```
+
+The schedule check prints `allowed` or `quiet` (exit 0 or 1):
+
+```sh
+sudo podman exec sentinel-recorder sentinel-recorder check-schedule
+sudo podman exec sentinel-recorder sentinel-recorder check-schedule --at 2026-10-19T17:00
+```
+
+`--at` without a zone offset is the timezone in `/etc/sentinel/recorder.toml`.
+If the recorder exits with code 2, or `systemctl status sentinel-recorder` shows
+a restart loop, it cannot read `/etc/sentinel/recorder.toml` (that file must be
+mode 0644). Re-run the installer.
+If that restart loop is the recordings directory not being writable, the
+volume's top directory is not owned by uid 1000. Re-run the installer; it
+chowns that directory and leaves the frames under it alone.
+Quadlet units are not turned off with `systemctl disable`. Switching mode
+removes the other mode's `.container` file and runs `systemctl daemon-reload`.
+The recordings volume and `/etc/sentinel/frigate*` stay on disk.
+
 ## What not to commit
 
-`secrets/`, `/etc/sentinel/frigate.env`, mosquitto `passwords`, probe output,
-and any config copy whose token was rendered into the URL.
+`secrets/`, `/etc/sentinel/frigate.env`, `/etc/sentinel/recorder.env`, mosquitto
+`passwords`, probe output, and any config copy whose token was rendered into the URL.

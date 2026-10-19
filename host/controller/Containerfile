@@ -10,6 +10,10 @@ COPY src ./src
 
 RUN pip install --no-cache-dir .
 
+# Podman copies this mount point's ownership into a new, empty named volume.
+RUN mkdir -p /var/lib/sentinel/evidence \
+    && chown sentinel:sentinel /var/lib/sentinel/evidence
+
 USER sentinel
 ENV SENTINEL_CONFIG=/etc/sentinel/controller.toml
 

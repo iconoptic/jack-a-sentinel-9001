@@ -4,14 +4,16 @@
 #   scripts/install-fedora.sh                 # packages, secrets, hidden AP, services, checks
 #   scripts/install-fedora.sh --with-esp-idf  # also full ESP-IDF, to flash cameras from this box
 #   scripts/install-fedora.sh -y              # don't prompt
+#   scripts/install-fedora.sh --mode simple --cameras a
 #
 # What "installed" means after this script:
 #   - secrets/ generated once and kept (random hidden SSID, WPA2 passphrase, MQTT passwords,
 #     per-camera stream tokens). Nothing is printed; nothing is committed.
 #   - the hidden camera AP exists as the NetworkManager profile `sentinel-ap` (autoconnect, so
 #     it returns after every reboot) with firewalld zone `sentinel`
-#   - mosquitto, Frigate and sentinel-controller run as system services (rootful Quadlet,
-#     images pinned by digest) and start at boot
+#   - mosquitto, plus either Frigate and sentinel-controller (mode frigate, the default) or
+#     sentinel-recorder (mode simple), as system services (rootful Quadlet, images pinned by
+#     digest) that start at boot
 #   - esp_prov and the repo .venv for the BLE fallback path
 # Then flash the cameras: scripts/install-esp32.sh all  (on this box or on the Arch machine).
 #
@@ -21,6 +23,10 @@
 #   --wifi-iface IF     AP interface (default: first AP-capable Wi-Fi device)
 #   --channel N         1, 6 or 11 (default: scan and pick the quietest)
 #   --cameras a,b,c     cameras to provision (default: all three)
+#   --mode frigate|simple
+#                       frigate (default) detects people; simple records motion JPEGs.
+#                       With no flag, install-services keeps /etc/sentinel/mode if it exists.
+#   --ignore-schedule   simple mode only: record on motion at any time. Not saved.
 #   --pull-images       accepted for compatibility; services always pull and pin digests
 #   --no-esp-prov       skip esp_prov
 #
@@ -30,6 +36,7 @@ set -euo pipefail
 require_not_root
 
 WITH_IDF=0 WITH_PROV=1 DEPLOY=1 DO_AP=1 DO_SERVICES=1 IFACE="" CHANNEL="" CAMERAS="a,b,c"
+MODE="" IGNORE_SCHEDULE=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --pull-images)  ;;
@@ -41,12 +48,20 @@ while [[ $# -gt 0 ]]; do
     --wifi-iface)   IFACE="${2:?}"; shift ;;
     --channel)      CHANNEL="${2:?}"; shift ;;
     --cameras)      CAMERAS="${2:?}"; shift ;;
+    --mode)         MODE="${2:?}"; shift ;;
+    --ignore-schedule) IGNORE_SCHEDULE=1 ;;
     -y|--yes)       export ASSUME_YES=1 ;;
-    -h|--help)      sed -n '2,27p' "$0"; exit 0 ;;
+    -h|--help)      awk 'NR == 1 { next } /^#/ { print; next } { exit }' "$0"; exit 0 ;;
     *)              die "Unknown option: $1 (see --help)" ;;
   esac
   shift
 done
+if [[ -n $MODE && $MODE != frigate && $MODE != simple ]]; then
+  die "--mode must be frigate or simple"
+fi
+if [[ $IGNORE_SCHEDULE == 1 && $MODE == frigate ]]; then
+  die "--ignore-schedule applies only to --mode simple"
+fi
 
 . /etc/os-release
 [[ "${ID:-}" == fedora ]] || die "This is for Fedora (found ID=${ID:-?})."
@@ -197,11 +212,23 @@ if [[ $DEPLOY == 1 ]]; then
 
   if [[ $DO_SERVICES == 1 ]]; then
     echo
-    info "System services: mosquitto, Frigate, sentinel-controller (images are large; the first run takes a while)"
+    svc_mode=$MODE
+    if [[ -z $svc_mode && -r /etc/sentinel/mode ]]; then
+      svc_mode=$(tr -d '[:space:]' < /etc/sentinel/mode)
+    fi
+    svc_mode=${svc_mode:-frigate}
+    if [[ $svc_mode == simple ]]; then
+      info "System services: mosquitto and sentinel-recorder (simple mode; the first run takes a while)"
+    else
+      info "System services: mosquitto, Frigate, sentinel-controller (frigate mode; images are large; the first run takes a while)"
+    fi
     if ! ip -4 -o addr show | grep -q ' 10\.77\.0\.1/24'; then
       warn "10.77.0.1 is not up (no AP). mosquitto will retry until it is; fix the AP stage and re-run."
     fi
-    sudo "$REPO_ROOT/host/scripts/install-services.sh" --cameras "$CAMERAS"
+    svc_args=(--cameras "$CAMERAS")
+    [[ -n $MODE ]] && svc_args+=(--mode "$MODE")
+    [[ $IGNORE_SCHEDULE == 1 ]] && svc_args+=(--ignore-schedule)
+    sudo "$REPO_ROOT/host/scripts/install-services.sh" "${svc_args[@]}"
   fi
 fi
 
@@ -209,11 +236,17 @@ echo
 info "Done."
 [[ $NEED_RELOGIN == 1 ]] && warn "Log out and back in before flashing, for serial access."
 if [[ $DEPLOY == 1 ]]; then
+  if [[ -r /etc/sentinel/mode ]]; then
+    summary_mode=$(tr -d '[:space:]' < /etc/sentinel/mode)
+  else
+    summary_mode=${MODE:-frigate}
+  fi
   cat <<EOF
 
+Mode: $summary_mode
 Secrets: $SECRETS_DIR
-  ap.env holds the SSID and passphrase; frigate-admin.txt holds Frigate's first admin login.
-  Back this directory up somewhere private: losing it means reflashing every camera.
+  ap.env holds the SSID and passphrase. Back this directory up somewhere private:
+  losing it means reflashing every camera.
 
 Next, flash the cameras (one board at a time, over USB). Each boots already bound: no BLE
 step, no PoP to copy.
@@ -221,10 +254,24 @@ step, no PoP to copy.
                      scripts/install-esp32.sh all
   - on the Arch box: scripts/install-esp32.sh all --from $USER@$(hostname -s)
                      (set SENTINEL_REMOTE_REPO=$REPO_ROOT if the checkout is elsewhere on this host)
+EOF
+  if [[ $summary_mode == simple ]]; then
+    cat <<EOF
+
+Check:  systemctl status mosquitto sentinel-recorder
+        journalctl -u sentinel-recorder -f
+Recordings: /var/lib/containers/storage/volumes/sentinel-recordings/_data
+Switch back to Frigate: scripts/install-fedora.sh --mode frigate
+EOF
+  else
+    cat <<EOF
 
 Check:  systemctl status mosquitto frigate sentinel-controller
         https://127.0.0.1:8971   (Frigate UI, self-signed certificate)
+        frigate-admin.txt holds Frigate's first admin login.
+Switch to simple mode: scripts/install-fedora.sh --mode simple --cameras a
 EOF
+  fi
 else
   cat <<EOF
 

@@ -30,6 +30,22 @@ seconds before the trigger.
 - **Recording and detection run on the host**, in [Frigate](https://frigate.video).
   The host keeps a rolling buffer, so a trigger can save footage from *before* the event.
 
+## Modes
+
+Frigate mode is the default: person detection, face labels, and the cross-camera
+controller. Simple mode records the camera's own JPEG frames when the picture
+changes. The camera serves one stream client, so the installer runs one mode.
+
+| | Frigate (default) | Simple |
+| --- | --- | --- |
+| Install | `scripts/install-fedora.sh` | `scripts/install-fedora.sh --mode simple --cameras a` |
+| Recording | Frigate clips around a person | The camera's JPEG frames, while the picture is changing |
+| Schedule | Frigate's retention settings | Motion from 4:00 pm to 6:00 am Monday–Friday, and any time on the weekend |
+
+That schedule is every moment except Monday–Friday 06:00–16:00 in the host's
+local timezone, so Monday before 6:00 am is still recorded. Switch back with
+`scripts/install-fedora.sh --mode frigate`.
+
 ## Layout
 
 | Path | What |

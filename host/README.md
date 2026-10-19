@@ -20,8 +20,8 @@ in the runbook and stay with a person on that box.
 | [scripts/probe-host.sh](scripts/probe-host.sh) | Print CPU, Wi-Fi AP capability, `/dev/dri`, and routes. |
 | [scripts/generate-secrets.sh](scripts/generate-secrets.sh) | Create, once and idempotently: `secrets/ap.env` (random hidden SSID + passphrase), MQTT passwords for all accounts, ACL, per-camera stream tokens. |
 | [network/install-ap.sh](network/install-ap.sh) | Pick interface and channel, free the radio from client profiles, run `setup-ap.sh`, record the BSSID. |
-| [scripts/install-services.sh](scripts/install-services.sh) | Pull and pin images, hash MQTT passwords, install configs and Quadlet units, build the controller, start and verify the services. |
-| [scripts/pin-digests.sh](scripts/pin-digests.sh) | Pull images on Fedora and pin `Image=` by digest. |
+| [scripts/install-services.sh](scripts/install-services.sh) | Pull and pin images, hash MQTT passwords, install configs and Quadlet units, and start the selected mode (`--mode frigate` or `--mode simple`). |
+| [scripts/pin-digests.sh](scripts/pin-digests.sh) | Pull images on Fedora and pin `Image=` by digest. `--skip-frigate` pins Mosquitto only. |
 | [scripts/hash-mqtt-passwords.sh](scripts/hash-mqtt-passwords.sh) | Build the mosquitto password file with the image's `mosquitto_passwd`. |
 | [scripts/render-frigate-config.sh](scripts/render-frigate-config.sh) | Manual single-token fallback. The installer instead renders all cameras and tokens with `sentinel-provision render-frigate`, so it never depends on go2rtc substituting the token. |
 

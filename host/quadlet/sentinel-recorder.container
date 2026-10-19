@@ -1,0 +1,28 @@
+# Simple mode (motion JPEGs). Install with host/scripts/install-services.sh --mode simple.
+# Quadlet units cannot be `systemctl disable`d. Removing this file and
+# `systemctl daemon-reload` is how simple mode is turned off.
+#
+# Build image on the host:
+#   podman build -t localhost/sentinel-recorder:latest -f host/recorder/Containerfile host/recorder
+
+[Unit]
+Description=Sentinel simple motion recorder
+After=network-online.target mosquitto.service
+Wants=network-online.target
+# The camera serves one stream client. No Requires=: the recorder does not use MQTT.
+Conflicts=frigate.service sentinel-controller.service
+
+[Container]
+ContainerName=sentinel-recorder
+Image=localhost/sentinel-recorder:latest
+Network=host
+EnvironmentFile=/etc/sentinel/recorder.env
+Environment=SENTINEL_RECORDER_CONFIG=/etc/sentinel/recorder.toml
+Volume=/etc/sentinel/recorder.toml:/etc/sentinel/recorder.toml:ro,Z
+Volume=sentinel-recordings.volume:/var/lib/sentinel/recordings:Z
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
