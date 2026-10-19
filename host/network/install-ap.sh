@@ -28,7 +28,20 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-have nmcli && have iw && have ip || die "nmcli, iw and ip are required (scripts/install-fedora.sh installs them)."
+. /etc/os-release
+is_arch=0 is_fedora=0
+[[ "${ID:-}" == arch || " ${ID_LIKE:-} " == *" arch "* ]] && is_arch=1
+[[ "${ID:-}" == fedora || " ${ID_LIKE:-} " == *" fedora "* || " ${ID_LIKE:-} " == *" rhel "* ]] && is_fedora=1
+
+if ! have nmcli || ! have iw || ! have ip; then
+  if (( is_arch )); then
+    die "nmcli, iw and ip are required (pacman -S networkmanager iw)."
+  elif (( is_fedora )); then
+    die "nmcli, iw and ip are required (scripts/install-fedora.sh installs them)."
+  else
+    die "nmcli, iw and ip are required (NetworkManager + iw)."
+  fi
+fi
 [[ -f "$SECRETS_DIR/ap.env" ]] || die "No secrets/ap.env. Run host/scripts/generate-secrets.sh first."
 
 default_dev() { ip -4 route show default | awk '{for (i = 1; i < NF; i++) if ($i == "dev") { print $(i + 1); exit }}'; }
@@ -117,6 +130,31 @@ if ((${#clients[@]})); then
 fi
 
 # --- 4. The AP ------------------------------------------------------------------
+# setup-ap.sh needs a running firewalld (zone sentinel). Fedora's installer enables it;
+# on Arch we install/enable here when missing so the same script works for bench use.
+if ! have firewall-cmd; then
+  if (( is_arch )); then
+    confirm "firewalld is not installed (needed for the sentinel zone). Install it?" \
+      || die "Declined. Install firewalld (pacman -S firewalld), enable it, and re-run."
+    pacman_opts=(--needed)
+    [[ "${ASSUME_YES:-0}" == 1 ]] && pacman_opts+=(--noconfirm)
+    info "Installing firewalld"
+    sudo pacman -S "${pacman_opts[@]}" firewalld
+  elif (( is_fedora )); then
+    die "firewall-cmd is not installed. Run: sudo dnf install firewalld  (or scripts/install-fedora.sh)"
+  else
+    die "firewall-cmd is not installed. Install and enable firewalld, then re-run."
+  fi
+fi
+if systemctl is-active --quiet firewalld; then
+  ok "firewalld active"
+else
+  confirm "firewalld is not running. Enable it now?" \
+    || die "Declined. The AP needs firewalld for zone sentinel: sudo systemctl enable --now firewalld"
+  sudo systemctl enable --now firewalld
+  ok "firewalld active"
+fi
+
 ap_matches() {
   [[ "$(nmcli -g GENERAL.STATE connection show "$CON" 2>/dev/null)" == activated* ]] || return 1
   [[ "$(nmcli -g 802-11-wireless.ssid connection show "$CON")" == "$(ap_env_get SSID)" ]] || return 1
